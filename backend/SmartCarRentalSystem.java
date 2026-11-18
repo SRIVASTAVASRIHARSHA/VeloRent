@@ -798,7 +798,7 @@ public class SmartCarRentalSystem {
                 System.out.println("That booking is already "+b.status+".");
                 return;
             }
-            boolean late=Duration.between(LocalDate.now(),b.startDay).toDays()<2;
+            boolean late=java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(),b.startDay)<2;
             double fee=late?b.rent*.20:0;
             double refund=b.rent+b.tax+b.deposit-fee;
             System.out.println("Cancellation fee: "+money(fee)+"\nRefund due: "+money(refund));
