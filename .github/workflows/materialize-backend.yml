@@ -3,7 +3,7 @@ name: Add Java backend to VeloRent
 on:
   push:
     paths:
-      - '.github/scripts/backend-source.zip.b64'
+      - '.github/scripts/backend-source-ready.txt'
   workflow_dispatch:
 
 permissions:
@@ -36,6 +36,16 @@ jobs:
         with:
           persist-credentials: true
 
+      - name: Assemble and extract backend package
+        run: |
+          mkdir -p /tmp/velorent-backend
+          cat .github/scripts/backend-source-*.b64 > /tmp/backend-source.zip.b64
+          base64 --decode /tmp/backend-source.zip.b64 > /tmp/velorent-backend.zip
+          unzip -q /tmp/velorent-backend.zip -d /tmp/velorent-backend
+          cp -R /tmp/velorent-backend/VeloRent_Backend_Patched/backend ./backend
+          mkdir -p .github/workflows
+          cp /tmp/velorent-backend/VeloRent_Backend_Patched/.github/workflows/backend-ci.yml .github/workflows/backend-ci.yml
+
       - name: Set up Java 21 and Maven cache
         uses: actions/setup-java@v4
         with:
@@ -43,16 +53,6 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/pom.xml
-
-      - name: Extract backend package
-        run: |
-          mkdir -p /tmp/velorent-backend
-          base64 --decode .github/scripts/backend-source.zip.b64 > /tmp/velorent-backend.zip
-          unzip -q /tmp/velorent-backend.zip -d /tmp/velorent-backend
-          cp -R /tmp/velorent-backend/VeloRent_Backend_Patched/backend ./backend
-          mkdir -p .github/workflows
-          cp /tmp/velorent-backend/VeloRent_Backend_Patched/.github/workflows/backend-ci.yml .github/workflows/backend-ci.yml
-          rm .github/scripts/backend-source.zip.b64
 
       - name: Compile and run real-MySQL integration tests
         run: mvn -B -f backend/pom.xml clean verify
@@ -113,10 +113,13 @@ jobs:
           **Integration boundary:** the Java console backend and Next.js website are separate applications. A REST API is still required before the website can use live vehicle data or save website bookings in MySQL.
           EOF
 
+      - name: Remove temporary archive payload
+        run: rm .github/scripts/backend-source-*.b64 .github/scripts/backend-source-ready.txt
+
       - name: Commit backend files and documentation
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend .github/workflows/backend-ci.yml README.md .github/workflows/materialize-backend.yml
+          git add backend .github README.md
           git commit -m "Add Java JDBC MySQL backend and integration tests"
           git push
