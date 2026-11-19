@@ -11,6 +11,8 @@ export default function Home() {
   const [carsData, setCarsData] = useState<Car[]>(cars);
   const [apiConnected, setApiConnected] = useState(false);
   const [customerName, setCustomerName] = useState("");
+  const [historyName, setHistoryName] = useState("");
+  const [customerBookings, setCustomerBookings] = useState<Array<Record<string, any>>>([]);
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +48,29 @@ export default function Home() {
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(""), 2600);
+  }
+
+  async function loadBookings() {
+    if (!historyName.trim()) { notify("Enter the name used for the booking."); return; }
+    try {
+      const response = await fetch(apiBase + "/bookings?customer=" + encodeURIComponent(historyName.trim()));
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load bookings.");
+      setCustomerBookings(data);
+    } catch (error) { notify(error instanceof Error ? error.message : "Could not reach the Java API."); }
+  }
+
+  async function updateBooking(id: number, action: "cancel" | "return") {
+    try {
+      const response = await fetch(apiBase + "/bookings/" + id + "/" + action, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customer: historyName.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Booking update failed.");
+      notify("Booking " + action + " completed.");
+      await loadBookings();
+    } catch (error) { notify(error instanceof Error ? error.message : "Could not update booking."); }
   }
 
   async function confirmBooking() {
@@ -123,6 +148,21 @@ export default function Home() {
           </article>)}
           {filtered.length===0 && <div className="empty-state"><CarFront size={34}/><h3>No cars found</h3><p>Try another search or category.</p><button onClick={()=>{setSearch("");setActiveCategory("All cars")}}>Clear filters</button></div>}
         </div>
+      </section>
+
+      <section className="explore-section" id="my-bookings">
+        <div className="section-heading"><div><div className="eyebrow">YOUR DRIVE, YOUR HISTORY</div><h2>Manage your <span>bookings.</span></h2><p>Use the same name you entered when making your reservation.</p></div></div>
+        <div className="browse-controls" style={{marginTop:24}}>
+          <div className="mini-search"><input value={historyName} onChange={e=>setHistoryName(e.target.value)} placeholder="Customer name"/></div>
+          <button className="search-submit" onClick={loadBookings}>Find my bookings</button>
+        </div>
+        {customerBookings.length > 0 && <div style={{display:"grid",gap:12,marginTop:20}}>
+          {customerBookings.map(b=><article key={b.id} className="car-card" style={{padding:18,display:"flex",justifyContent:"space-between",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+            <div><strong>#{b.id} · {b.vehicleName}</strong><p style={{margin:"7px 0",color:"#89959a"}}>{b.startDate} to {b.returnDate} · {b.days} day(s) · {b.status}</p><small>Total incl. deposit: {money(Number(b.total))}</small></div>
+            {b.status === "ACTIVE" && <div style={{display:"flex",gap:8}}><button className="category" onClick={()=>updateBooking(Number(b.id),"cancel")}>Cancel</button><button className="category active" onClick={()=>updateBooking(Number(b.id),"return")}>Return car</button></div>}
+          </article>)}
+        </div>}
+        {customerBookings.length === 0 && historyName && <p style={{color:"#89959a",marginTop:18}}>No bookings loaded yet. Enter your name and select Find my bookings.</p>}
       </section>
 
       <section className="how-section" id="how">
