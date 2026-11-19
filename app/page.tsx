@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight, CalendarDays, CarFront, Check, ChevronDown, Clock3, Fuel, Heart, MapPin, Menu, Search, ShieldCheck, SlidersHorizontal, Sparkles, Star, Users, X, Zap } from "lucide-react";
 import { cars, categories, type Car } from "@/lib/cars";
 
@@ -8,6 +8,19 @@ const money = (n: number) => "₹" + n.toLocaleString("en-IN");
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All cars");
+  const [carsData, setCarsData] = useState<Car[]>(cars);
+  const [apiConnected, setApiConnected] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
+  useEffect(() => {
+    let cancelled = false;
+    fetch(apiBase + "/vehicles").then(r => { if (!r.ok) throw new Error("API unavailable"); return r.json(); }).then((items: any[]) => {
+      if (cancelled) return;
+      setCarsData(items.map((item, i) => { const sample = cars.find(c => c.name.toLowerCase() === String(item.name).toLowerCase()) || cars[i % cars.length]; return { id:Number(item.id), name:String(item.name), type:String(item.type), seats:Number(item.seats), fuel:String(item.fuel), transmission:String(item.transmission || "Not specified"), price:Number(item.price), rating:Number(item.rating), trips:Number(item.totalRentals || 0), image:sample.image, tag:sample.tag, description:String(item.description || sample.description) }; }));
+      setApiConnected(true);
+    }).catch(() => { if (!cancelled) setApiConnected(false); });
+    return () => { cancelled = true; };
+  }, [apiBase]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recommended");
   const [selected, setSelected] = useState<Car | null>(null);
@@ -20,7 +33,7 @@ export default function Home() {
   const [toast, setToast] = useState("");
 
   const filtered = useMemo(() => {
-    let result = cars.filter(car =>
+    let result = carsData.filter(car =>
       (activeCategory === "All cars" || car.type === activeCategory) &&
       (car.name.toLowerCase().includes(search.toLowerCase()) || car.type.toLowerCase().includes(search.toLowerCase()))
     );
@@ -28,7 +41,7 @@ export default function Home() {
     if (sort === "price-high") result = [...result].sort((a,b) => b.price-a.price);
     if (sort === "rating") result = [...result].sort((a,b) => b.rating-a.rating);
     return result;
-  }, [activeCategory, search, sort]);
+  }, [carsData, activeCategory, search, sort]);
 
   function notify(message: string) {
     setToast(message);
