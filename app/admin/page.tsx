@@ -33,10 +33,11 @@ export default function AdminPage() {
   useEffect(()=>{ /* Admin data is loaded only after the password is submitted. */ },[]);
   async function addVehicle(event:React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await request("/admin/vehicles",{method:"POST",body:JSON.stringify({category:form.get("category"),brand:form.get("brand"),model:form.get("model"),fuel:form.get("fuel"),seats:Number(form.get("seats")),pricePerDay:Number(form.get("price")),rating:Number(form.get("rating"))})});
-      event.currentTarget.reset(); setMessage("Vehicle added."); await load();
+      formElement.reset(); setMessage("Vehicle added."); await load();
     } catch(e) { setMessage(e instanceof Error?e.message:"Could not add vehicle"); }
   }
   async function changePrice(vehicle:Vehicle) {
