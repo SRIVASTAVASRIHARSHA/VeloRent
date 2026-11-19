@@ -18,7 +18,7 @@ export default function Home() {
     let cancelled = false;
     fetch(apiBase + "/vehicles").then(r => { if (!r.ok) throw new Error("API unavailable"); return r.json(); }).then((items: any[]) => {
       if (cancelled) return;
-      setCarsData(items.map((item, i) => { const sample = cars.find(c => c.name.toLowerCase() === String(item.name).toLowerCase()) || cars[i % cars.length]; return { id:Number(item.id), name:String(item.name), type:String(item.type), seats:Number(item.seats), fuel:String(item.fuel), transmission:String(item.transmission || "Not specified"), price:Number(item.price), rating:Number(item.rating), trips:Number(item.totalRentals || 0), image:sample.image, tag:sample.tag, description:String(item.description || sample.description) }; }));
+      setCarsData(items.map((item, i) => { const sample = cars.find(c => c.name.toLowerCase() === String(item.name).toLowerCase()) || cars[i % cars.length]; return { id:Number(item.id), name:String(item.name), type:String(item.type), seats:Number(item.seats), fuel:String(item.fuel), transmission:String(item.transmission || "Not specified"), price:Number(item.price), rating:Number(item.rating), trips:Number(item.totalRentals || 0), image:sample.image, tag:sample.tag, description:String(item.description || sample.description), available:Boolean(item.available) }; }));
       setApiConnected(true);
     }).catch(() => { if (!cancelled) setApiConnected(false); });
     return () => { cancelled = true; };
@@ -37,7 +37,7 @@ export default function Home() {
   const filtered = useMemo(() => {
     let result = carsData.filter(car =>
       (activeCategory === "All cars" || car.type === activeCategory) &&
-      (car.name.toLowerCase().includes(search.toLowerCase()) || car.type.toLowerCase().includes(search.toLowerCase()))
+      (car.name.toLowerCase().includes(search.toLowerCase()) || car.type.toLowerCase().includes(search.toLowerCase())) && car.available !== false
     );
     if (sort === "price-low") result = [...result].sort((a,b) => a.price-b.price);
     if (sort === "price-high") result = [...result].sort((a,b) => b.price-a.price);
@@ -71,6 +71,23 @@ export default function Home() {
       notify("Booking " + action + " completed.");
       await loadBookings();
     } catch (error) { notify(error instanceof Error ? error.message : "Could not update booking."); }
+  }
+
+  async function searchAvailability() {
+    const days = Math.ceil((new Date(returnDate + "T00:00:00").getTime() - new Date(pickupDate + "T00:00:00").getTime()) / 86400000);
+    if (!Number.isFinite(days) || days < 1) { notify("Choose a valid return date after pickup."); return; }
+    try {
+      const response = await fetch(apiBase + "/vehicles?startDate=" + encodeURIComponent(pickupDate) + "&days=" + days);
+      const items = await response.json();
+      if (!response.ok) throw new Error(items.error || "Availability search failed.");
+      setCarsData(items.map((item: any, i: number) => {
+        const sample = cars.find(c => c.name.toLowerCase() === String(item.name).toLowerCase()) || cars[i % cars.length];
+        return { id:Number(item.id), name:String(item.name), type:String(item.type), seats:Number(item.seats), fuel:String(item.fuel), transmission:String(item.transmission || "Not specified"), price:Number(item.price), rating:Number(item.rating), trips:Number(item.totalRentals || 0), image:sample.image, tag:sample.tag, description:String(item.description || sample.description), available:Boolean(item.available) };
+      }));
+      setApiConnected(true);
+      document.getElementById("explore")?.scrollIntoView({behavior:"smooth"});
+      notify("Availability updated for your selected dates.");
+    } catch (error) { notify(error instanceof Error ? error.message : "Could not reach the Java API."); }
   }
 
   async function confirmBooking() {
@@ -118,7 +135,7 @@ export default function Home() {
           <div className="search-field location-field"><label><MapPin size={16}/> PICK-UP LOCATION</label><input value={pickup} onChange={e=>setPickup(e.target.value)} placeholder="Where are you starting?"/></div>
           <div className="search-field"><label><CalendarDays size={16}/> PICK-UP DATE</label><input type="date" value={pickupDate} onChange={e=>setPickupDate(e.target.value)}/></div>
           <div className="search-field"><label><CalendarDays size={16}/> RETURN DATE</label><input type="date" value={returnDate} min={pickupDate} onChange={e=>setReturnDate(e.target.value)}/></div>
-          <button className="search-submit" onClick={()=>{document.getElementById("explore")?.scrollIntoView({behavior:"smooth"});notify("Showing cars for your selected dates.")}}><Search size={18}/> Find my car</button>
+          <button className="search-submit" onClick={searchAvailability}><Search size={18}/> Find my car</button>
         </div>
       </section>
 
