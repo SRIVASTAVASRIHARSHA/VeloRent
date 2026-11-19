@@ -48,9 +48,18 @@ export default function Home() {
     window.setTimeout(() => setToast(""), 2600);
   }
 
-  function confirmBooking() {
-    setBooking(null);
-    notify("Your demo booking request is ready. Connect the Java API to save it.");
+  async function confirmBooking() {
+    if (!booking) return;
+    if (!customerName.trim()) { notify("Enter your name to continue."); return; }
+    const days = Math.ceil((new Date(returnDate + "T00:00:00").getTime() - new Date(pickupDate + "T00:00:00").getTime()) / 86400000);
+    if (!Number.isFinite(days) || days < 1) { notify("Choose a valid return date after pickup."); return; }
+    try {
+      const response = await fetch(apiBase + "/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customer: customerName.trim(), vehicleId: booking.id, startDate: pickupDate, days }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Booking could not be completed.");
+      setBooking(null);
+      notify("Booking confirmed! Your booking ID is " + data.id + ".");
+    } catch (error) { notify(error instanceof Error ? error.message : "Could not reach the Java API. Start the backend first."); }
   }
 
   return (
@@ -88,7 +97,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="trust-strip" id="benefits">
+      <section className="trust-strip" id="benefits"><div><ShieldCheck/><span><strong>{apiConnected ? "Database connected" : "Demo catalogue fallback"}</strong><small>{apiConnected ? "Live MySQL vehicle data" : "Start Java API for live data"}</small></span></div>
         <div><ShieldCheck/><span><strong>Clear & simple</strong><small>No confusing surprises</small></span></div>
         <div><Clock3/><span><strong>More flexibility</strong><small>Plans that fit your day</small></span></div>
         <div><Zap/><span><strong>Quick discovery</strong><small>Find your ride faster</small></span></div>
@@ -130,7 +139,7 @@ export default function Home() {
       <footer className="footer"><a className="brand" href="#"><span className="brand-mark"><CarFront size={22}/></span><span>drive<span className="brand-accent">ease</span></span></a><p>Thoughtful rides for wherever life takes you.</p><div className="footer-links"><a href="#explore">Explore</a><a href="#how">How it works</a><a href="#benefits">Why DriveEase</a><a href="/about">About project</a></div><small>© 2026 DriveEase. A Smart Car Rental System project.</small></footer>
 
       {selected && <div className="modal-backdrop" onClick={()=>setSelected(null)}><div className="detail-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setSelected(null)}><X/></button><img className="detail-image" src={selected.image} alt={selected.name}/><div className="detail-content"><div className="detail-heading"><div><span className="car-type">{selected.type}</span><h2>{selected.name}</h2></div><div className="rating"><Star size={15} fill="currentColor"/>{selected.rating}</div></div><p>{selected.description}</p><div className="detail-specs"><span><Users/>{selected.seats} seats</span><span><Fuel/>{selected.fuel}</span><span><CarFront/>{selected.transmission}</span></div><div className="detail-price"><div><strong>{money(selected.price)}</strong><small> / day</small></div><button className="search-submit" onClick={()=>{setBooking(selected);setSelected(null)}}>Continue to booking <ArrowRight size={17}/></button></div></div></div></div>}
-      {booking && <div className="modal-backdrop" onClick={()=>setBooking(null)}><div className="booking-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setBooking(null)}><X/></button><div className="eyebrow">ALMOST THERE</div><h2>Review your trip</h2><div className="booking-car"><img src={booking.image} alt={booking.name}/><div><strong>{booking.name}</strong><small>{booking.type} · {booking.seats} seats</small></div></div><div className="booking-line"><span>Pick-up</span><strong>{pickup} · {pickupDate}</strong></div><div className="booking-line"><span>Return</span><strong>{returnDate}</strong></div><div className="booking-line total"><span>Daily rate</span><strong>{money(booking.price)} / day</strong></div><p className="booking-note">This is a front-end preview. Booking confirmation will be connected to the Java + MySQL API.</p><button className="search-submit full" onClick={confirmBooking}>Request booking <ArrowRight size={17}/></button></div></div>}
+      {booking && <div className="modal-backdrop" onClick={()=>setBooking(null)}><div className="booking-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setBooking(null)}><X/></button><div className="eyebrow">ALMOST THERE</div><h2>Review your trip</h2><div className="booking-car"><img src={booking.image} alt={booking.name}/><div><strong>{booking.name}</strong><small>{booking.type} · {booking.seats} seats</small></div></div><div className="booking-line"><span>Pick-up</span><strong>{pickup} · {pickupDate}</strong></div><div className="booking-line"><span>Return</span><strong>{returnDate}</strong></div><div className="booking-line total"><span>Daily rate</span><strong>{money(booking.price)} / day</strong></div><label className="booking-line"><span>Your name</span><input value={customerName} onChange={e=>setCustomerName(e.target.value)} placeholder="Enter your full name" /></label><p className="booking-note">Your booking is saved to the local MySQL database through the Java API.</p><button className="search-submit full" onClick={confirmBooking}>Request booking <ArrowRight size={17}/></button></div></div>}
       {toast && <div className="toast"><Check size={17}/>{toast}</div>}
     </main>
   );
