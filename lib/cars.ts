@@ -1,7 +1,7 @@
 export type Car = {
   id: number; name: string; type: string; seats: number; fuel: string;
   transmission: string; price: number; rating: number; trips: number;
-  image: string; tag?: string; description: string;
+  image: string; tag?: string; description: string; available?: boolean;
 };
 
 export const cars: Car[] = [
