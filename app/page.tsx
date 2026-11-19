@@ -112,7 +112,7 @@ export default function Home() {
           <a href="#explore" onClick={() => setMobileMenu(false)}>Explore cars</a>
           <a href="#how" onClick={() => setMobileMenu(false)}>How it works</a>
           <a href="#benefits" onClick={() => setMobileMenu(false)}>Why DriveEase</a>
-          <a href="/about" onClick={() => setMobileMenu(false)}>About project</a>
+          <a href="#my-bookings" onClick={() => setMobileMenu(false)}>My bookings</a><a href="/admin" onClick={() => setMobileMenu(false)}>Admin</a><a href="/about" onClick={() => setMobileMenu(false)}>About project</a>
         </nav>
         <div className="nav-actions"><button className="login-btn" onClick={() => notify("Sign-in can be connected to your backend next.")}>Log in</button><button className="host-btn" onClick={() => notify("Host onboarding is coming soon.")}>List your car <ArrowUpRight size={15}/></button></div>
         <button className="mobile-toggle" aria-label="Toggle menu" onClick={() => setMobileMenu(!mobileMenu)}>{mobileMenu ? <X/> : <Menu/>}</button>
