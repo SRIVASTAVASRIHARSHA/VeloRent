@@ -69,3 +69,31 @@ IMPORTANT LIMITATIONS
   layer is still needed before the website can read or write these MySQL records.
 - The default admin password is for demonstration only; configure ADMIN_PASSWORD.
 - The test suite must only be run against its dedicated test database.
+
+
+RUN THE WEB API (for the Next.js DriveEase frontend)
+From the repository root, after creating the database and setting DB_URL/DB_USER/DB_PASSWORD/ADMIN_PASSWORD:
+
+  cd backend
+  mvn clean compile
+  mvn exec:java -Dexec.mainClass=RentalApiServer
+
+The API listens on http://localhost:8080 by default. Set PORT to change it.
+Set CORS_ORIGIN if the frontend is not running at http://localhost:3000.
+
+API ROUTES
+- GET /api/health
+- GET /api/vehicles?startDate=YYYY-MM-DD&days=2
+- POST /api/bookings (JSON: customer, vehicleId, startDate, days, optional promoCode)
+- GET /api/bookings?customer=Name
+- POST /api/bookings/{id}/cancel (JSON: customer)
+- POST /api/bookings/{id}/return (JSON: customer)
+- GET /api/admin/bookings (X-Admin-Password header)
+- POST /api/admin/vehicles (X-Admin-Password header)
+- PATCH /api/admin/vehicles/{id}/price
+- DELETE /api/admin/vehicles/{id}
+- POST /api/admin/vehicles/{id}/maintenance
+- GET/POST /api/admin/promos; PATCH /api/admin/promos/{code}
+- GET /api/admin/reports
+
+The frontend reads NEXT_PUBLIC_API_BASE_URL from the repository-root .env.local file. Use http://localhost:8080/api for local development.
